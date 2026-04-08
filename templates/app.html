@@ -1,220 +1,677 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Reminders</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>Reminders</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .priority-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .priority-high {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .priority-low {
+            background-color: #198754;
+            color: white;
+        }
+        .task-checkbox:checked + .task-title {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        .task-item:hover {
+            background-color: #f8f9fa;
+        }
+        .notification-bell {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .notification-bell:hover {
+            transform: scale(1.1);
+        }
+        .filter-active {
+            font-weight: bold;
+            border-bottom: 2px solid #0d6efd;
+        }
+        .search-box {
+            transition: all 0.3s;
+        }
+        .search-box:focus {
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            border-color: #86b7fe;
+        }
+    </style>
 </head>
+
 <body class="bg-light">
-
-<div class="container-fluid vh-100 d-flex p-0">
-
-  <!-- ── Sidebar ─────────────────────────────────────── -->
-  <div class="bg-white border-end d-flex flex-column p-3" style="width: 240px; min-width: 240px;">
-
-    <!-- User badge -->
-    <div class="d-flex align-items-center gap-2 mb-3 pb-3 border-bottom">
-      <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
-           style="width: 34px; height: 34px; font-size: 14px;">
-        {{ user.username[0] | upper }}
-      </div>
-      <span class="fw-semibold small text-truncate">{{ user.username }}</span>
+    <div id="errorBox" class="alert alert-danger d-none position-fixed top-0 end-0 m-3 shadow" style="z-index: 9999;">
     </div>
 
-    <!-- Lists label -->
-    <h6 class="text-muted text-uppercase fw-bold small mb-2">My Lists</h6>
+    <div class="container-fluid vh-100 d-flex p-0">
 
-    <!-- List buttons -->
-    <div id="sidebar" class="flex-grow-1 overflow-auto"></div>
+        <!-- ── Sidebar ─────────────────────────────────────── -->
+        <div class="bg-white border-end d-flex flex-column p-3" style="width: 260px; min-width: 260px;">
 
-    <!-- New list -->
-    <button class="btn btn-sm btn-outline-primary mt-2" onclick="createList()">
-      <i class="bi bi-plus"></i> New List
-    </button>
+            <!-- User badge -->
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                        style="width: 34px; height: 34px; font-size: 14px;">
+                        {{ user.username[0] | upper }}
+                    </div>
+                    <span class="fw-semibold small text-truncate">{{ user.username }}</span>
+                </div>
+                <i class="bi bi-bell notification-bell text-secondary" id="notificationBell" onclick="checkReminders()"></i>
+            </div>
 
-    <!-- Sign out -->
-    <a href="/logout" class="btn btn-sm btn-outline-secondary mt-2">
-      <i class="bi bi-box-arrow-right"></i> Sign Out
-    </a>
+            <!-- Lists label -->
+            <h6 class="text-muted text-uppercase fw-bold small mb-2">My Lists</h6>
 
-  </div>
+            <!-- List buttons -->
+            <div id="sidebar" class="flex-grow-1 overflow-auto"></div>
 
-  <!-- ── Main Panel ───────────────────────────────────── -->
-  <div class="flex-grow-1 d-flex flex-column overflow-hidden">
+            <!-- New list -->
+            <button class="btn btn-sm btn-outline-primary mt-2" onclick="createList()">
+                <i class="bi bi-plus"></i> New List
+            </button>
 
-    <!-- Header -->
-    <div class="bg-white border-bottom p-4">
-      <h2 id="listTitle" class="fw-bold mb-0 text-secondary">Select a list</h2>
-      <small id="listCount" class="text-muted"></small>
-    </div>
+            <!-- Sign out -->
+            <a href="/logout" class="btn btn-sm btn-outline-secondary mt-2">
+                <i class="bi bi-box-arrow-right"></i> Sign Out
+            </a>
 
-    <!-- Tasks area -->
-    <div class="flex-grow-1 overflow-auto p-4">
-      <ul class="list-group shadow-sm" id="taskList"></ul>
-
-      <div id="addRow" class="d-none mt-2">
-        <div class="input-group">
-          <span class="input-group-text bg-white">
-            <i class="bi bi-plus-circle text-primary"></i>
-          </span>
-          <input id="newTask" type="text" class="form-control border-start-0"
-                 placeholder="Add reminder..." onkeydown="handleEnter(event)">
-          <button class="btn btn-primary" onclick="addTask()">Add</button>
         </div>
-      </div>
+
+        <!-- ── Main Panel ───────────────────────────────────── -->
+        <div class="flex-grow-1 d-flex flex-column overflow-hidden">
+
+            <!-- Header -->
+            <div class="bg-white border-bottom p-4">
+                <h2 id="listTitle" class="fw-bold mb-0 text-secondary">Select a list</h2>
+                <small id="listCount" class="text-muted"></small>
+            </div>
+
+            <!-- Tasks area -->
+            <div class="flex-grow-1 overflow-auto p-4">
+                <!-- Search and Filter Bar -->
+                <div class="row mb-3 g-2">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="searchInput" class="form-control search-box" 
+                                   placeholder="Search tasks..." onkeyup="applyFilters()">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="setFilter('all')" id="filterAll">
+                                <i class="bi bi-list-ul"></i> All
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="setFilter('pending')" id="filterPending">
+                                <i class="bi bi-circle"></i> Pending
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="setFilter('completed')" id="filterCompleted">
+                                <i class="bi bi-check-circle"></i> Completed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="list-group shadow-sm" id="taskList"></ul>
+
+                <div id="addRow" class="d-none mt-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <input id="newTask" type="text" class="form-control" 
+                                       placeholder="Task title..." onkeydown="handleEnter(event)">
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <input type="datetime-local" id="dueDate" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <select id="prioritySelect" class="form-select">
+                                        <option value="low">🟢 Low Priority</option>
+                                        <option value="medium" selected="selected">🟡 Medium Priority</option>
+                                        <option value="high">🔴 High Priority</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-primary w-100" onclick="addTask()">
+                                        <i class="bi bi-plus-circle"></i> Add Task
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
-  </div>
-</div>
-
-<script>
-let activeId = null;
-
-async function loadSidebar() {
-  const data = await fetch('/lists').then(r => r.json());
-  const sb   = document.getElementById('sidebar');
-
-  sb.innerHTML = data.lists.map(l => `
-    <div class="d-flex align-items-center mb-1 gap-1">
-      <button onclick="selectList(${l.id})"
-              class="btn btn-${activeId === l.id ? l.color : 'light'} flex-grow-1 text-start d-flex justify-content-between align-items-center">
-        <span>
-          <i class="bi bi-circle-fill text-${l.color} me-2" style="font-size: 10px;"></i>
-          ${escHtml(l.name)}
-        </span>
-        ${l.pending > 0 ? `<span class="badge bg-secondary">${l.pending}</span>` : ''}
-      </button>
-      <button class="btn btn-sm btn-outline-secondary border-0 px-1" title="Rename"
-              onclick="renameList(${l.id}, '${escAttr(l.name)}')">
-        <i class="bi bi-pencil"></i>
-      </button>
-      <button class="btn btn-sm btn-outline-danger border-0 px-1" title="Delete"
-              onclick="deleteList(${l.id}, '${escAttr(l.name)}')">
-        <i class="bi bi-trash"></i>
-      </button>
+    <!-- Create List Modal -->
+    <div class="modal fade" id="listModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New List</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input id="listNameInput" class="form-control" placeholder="Enter list name">
+                    <label class="form-label mt-2">Color:</label>
+                    <select id="listColorSelect" class="form-select">
+                        <option value="primary">Blue (Primary)</option>
+                        <option value="success">Green (Success)</option>
+                        <option value="danger">Red (Danger)</option>
+                        <option value="warning">Yellow (Warning)</option>
+                        <option value="info">Cyan (Info)</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" onclick="submitList()">Create</button>
+                </div>
+            </div>
+        </div>
     </div>
-  `).join('');
-}
 
-async function selectList(id) {
-  activeId = id;
-  await loadSidebar();
-  const list = await fetch(`/lists/${id}`).then(r => r.json());
-  document.getElementById('listTitle').textContent = list.name;
-  document.getElementById('listTitle').className   = `fw-bold mb-0 text-${list.color}`;
-  document.getElementById('addRow').classList.remove('d-none');
-  await loadTasks();
-}
+    <!-- Edit Task Modal -->
+    <div class="modal fade" id="editTaskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editTaskId">
+                    <div class="mb-2">
+                        <label class="form-label">Title</label>
+                        <input id="editTaskTitle" class="form-control" placeholder="Task title">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Note</label>
+                        <textarea id="editTaskNote" class="form-control" rows="3" placeholder="Add a note..."></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Due Date</label>
+                        <input type="datetime-local" id="editTaskDueDate" class="form-control">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Priority</label>
+                        <select id="editTaskPriority" class="form-select">
+                            <option value="low">🟢 Low Priority</option>
+                            <option value="medium">🟡 Medium Priority</option>
+                            <option value="high">🔴 High Priority</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" onclick="updateTask()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-async function loadTasks() {
-  const data  = await fetch(`/lists/${activeId}/todos`).then(r => r.json());
-  const ul    = document.getElementById('taskList');
-  const count = data.todos.filter(t => !t.done).length;
+    <script>
+        let activeId = null;
+        let allTasks = [];
+        let currentFilter = 'all';
+        let searchTerm = '';
+        let notificationPermissionGranted = false;
+        let shownReminders = new Set(); // Track shown notifications
 
-  document.getElementById('listCount').textContent =
-    count === 0 ? 'All done!' : `${count} reminder${count !== 1 ? 's' : ''}`;
+        // Request notification permission
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                notificationPermissionGranted = permission === 'granted';
+            });
+        }
 
-  if (data.todos.length === 0) {
-    ul.innerHTML = `
-      <li class="list-group-item text-center text-muted py-4">
-        <i class="bi bi-check2-circle fs-3 d-block mb-2"></i>
-        No reminders yet
-      </li>`;
-    return;
-  }
+        // Poll for due reminders every 30 seconds
+        setInterval(() => {
+            if (activeId) checkReminders();
+        }, 30000);
 
-  ul.innerHTML = data.todos.map(t => `
-    <li class="list-group-item d-flex align-items-center gap-3">
-      <input type="checkbox" class="form-check-input mt-0 flex-shrink-0"
-             ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id})">
-      <span class="flex-grow-1 ${t.done ? 'text-decoration-line-through text-muted' : ''}">
-        ${escHtml(t.title)}
-      </span>
-      <small class="text-muted d-none d-sm-block">${t.created_at}</small>
-      <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteTask(${t.id})">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </li>
-  `).join('');
-}
+        async function checkReminders() {
+            try {
+                const data = await apiFetch('/reminders/due');
+                const reminders = data.data.reminders;
+                
+                if (reminders && reminders.length > 0) {
+                    for (const reminder of reminders) {
+                        const reminderKey = `${reminder.id}_${reminder.due_date}`;
+                        if (!shownReminders.has(reminderKey) && !reminder.done) {
+                            shownReminders.add(reminderKey);
+                            
+                            // Show browser notification
+                            if (notificationPermissionGranted) {
+                                new Notification('⏰ Reminder Due!', {
+                                    body: `${reminder.title} is due now!`,
+                                    icon: 'https://cdn-icons-png.flaticon.com/512/190/190411.png'
+                                });
+                            }
+                            
+                            // Show in-app notification
+                            showError(`⏰ Reminder: ${reminder.title} is due!`, 5000);
+                        }
+                    }
+                    
+                    // Refresh tasks if current list has due reminders
+                    if (activeId) {
+                        await loadTasks();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking reminders:', error);
+            }
+        }
 
-async function addTask() {
-  const input = document.getElementById('newTask');
-  const title = input.value.trim();
-  if (!title || !activeId) return;
-  await fetch(`/lists/${activeId}/todos`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title })
-  });
-  input.value = '';
-  await loadSidebar();
-  await loadTasks();
-}
+        async function apiFetch(url, options = {}) {
+            const res = await fetch(url, options);
+            const data = await res.json();
 
-function handleEnter(e) { if (e.key === 'Enter') addTask(); }
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "An error occurred");
+            }
 
-async function toggleTask(id) {
-  await fetch(`/todos/${id}/toggle`, { method: 'PATCH' });
-  await loadSidebar();
-  await loadTasks();
-}
+            return data;
+        }
 
-async function deleteTask(id) {
-  await fetch(`/todos/${id}`, { method: 'DELETE' });
-  await loadSidebar();
-  await loadTasks();
-}
+        function setLoading(btn, isLoading = true) {
+            if (!btn) return;
 
-async function createList() {
-  const name = prompt('List name:');
-  if (!name || !name.trim()) return;
-  const colors = ['primary','success','danger','warning','info','secondary'];
-  const color  = colors[Math.floor(Math.random() * colors.length)];
-  await fetch('/lists', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name.trim(), color })
-  });
-  await loadSidebar();
-}
+            if (isLoading) {
+                btn.dataset.originalText = btn.innerHTML;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Loading...`;
+                btn.disabled = true;
+            } else {
+                btn.innerHTML = btn.dataset.originalText;
+                btn.disabled = false;
+            }
+        }
 
-async function renameList(id, currentName) {
-  const newName = prompt('Rename list:', currentName);
-  if (!newName || !newName.trim() || newName.trim() === currentName) return;
-  await fetch(`/lists/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: newName.trim() })
-  });
-  if (activeId === id) document.getElementById('listTitle').textContent = newName.trim();
-  await loadSidebar();
-}
+        function showError(msg, duration = 3000) {
+            const box = document.getElementById("errorBox");
+            box.textContent = msg;
+            box.classList.remove("d-none");
 
-async function deleteList(id, name) {
-  if (!confirm(`Delete "${name}" and all its reminders?`)) return;
-  await fetch(`/lists/${id}`, { method: 'DELETE' });
-  if (activeId === id) {
-    activeId = null;
-    document.getElementById('listTitle').textContent = 'Select a list';
-    document.getElementById('listTitle').className   = 'fw-bold mb-0 text-secondary';
-    document.getElementById('listCount').textContent = '';
-    document.getElementById('taskList').innerHTML    = '';
-    document.getElementById('addRow').classList.add('d-none');
-  }
-  await loadSidebar();
-}
+            setTimeout(() => {
+                box.classList.add("d-none");
+            }, duration);
+        }
 
-function escHtml(s) {
-  return String(s).replace(/[&<>"']/g, m =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
-}
-function escAttr(s) {
-  return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-}
+        function getPriorityBadge(priority) {
+            const labels = {
+                'high': '<span class="priority-badge priority-high">🔴 High</span>',
+                'medium': '<span class="priority-badge priority-medium">🟡 Medium</span>',
+                'low': '<span class="priority-badge priority-low">🟢 Low</span>'
+            };
+            return labels[priority] || labels.medium;
+        }
 
-loadSidebar();
-</script>
+        async function loadSidebar() {
+            try {
+                const data = await apiFetch('/lists');
+                const sb = document.getElementById('sidebar');
+
+                sb.innerHTML = data.data.lists.map(l => `
+                    <div class="d-flex align-items-center mb-1 gap-1">
+                        <button onclick="selectList(${l.id})"
+                                class="btn btn-${activeId === l.id ? l.color : 'light'} flex-grow-1 text-start d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="bi bi-circle-fill text-${l.color} me-2" style="font-size: 10px;"></i>
+                                ${escHtml(l.name)}
+                            </span>
+                            ${l.pending > 0 ? `<span class="badge bg-secondary">${l.pending}</span>` : ''}
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary border-0 px-1" title="Rename"
+                                onclick="renameList(${l.id}, '${escAttr(l.name)}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger border-0 px-1" title="Delete"
+                                onclick="deleteList(${l.id}, '${escAttr(l.name)}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showError('Failed to load lists');
+            }
+        }
+
+        async function selectList(id) {
+            activeId = id;
+            await loadSidebar();
+            try {
+                const list = await apiFetch(`/lists/${id}`);
+                document.getElementById('listTitle').textContent = list.data.name;
+                document.getElementById('listTitle').className = `fw-bold mb-0 text-${list.data.color}`;
+                document.getElementById('addRow').classList.remove('d-none');
+                await loadTasks();
+            } catch (error) {
+                showError('Failed to load list');
+            }
+        }
+
+        function applyFilters() {
+            searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filteredTasks = [...allTasks];
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredTasks = filteredTasks.filter(task => 
+                    task.title.toLowerCase().includes(searchTerm) ||
+                    (task.note && task.note.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            // Apply status filter
+            if (currentFilter === 'pending') {
+                filteredTasks = filteredTasks.filter(task => !task.done);
+            } else if (currentFilter === 'completed') {
+                filteredTasks = filteredTasks.filter(task => task.done);
+            }
+            
+            renderTasks(filteredTasks);
+        }
+        
+        function renderTasks(tasks) {
+            const ul = document.getElementById('taskList');
+            const pendingCount = tasks.filter(t => !t.done).length;
+            
+            document.getElementById('listCount').textContent = 
+                pendingCount === 0 ? 'All done!' : `${pendingCount} reminder${pendingCount !== 1 ? 's' : ''}`;
+            
+            if (tasks.length === 0) {
+                ul.innerHTML = `
+                    <li class="list-group-item text-center text-muted py-4">
+                        <i class="bi bi-check2-circle fs-3 d-block mb-2"></i>
+                        No tasks found
+                    </li>`;
+                return;
+            }
+            
+            ul.innerHTML = tasks.map(t => `
+                <li class="list-group-item d-flex align-items-center gap-3 task-item">
+                    <input type="checkbox" class="form-check-input mt-0 flex-shrink-0 task-checkbox"
+                           ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id})">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="task-title ${t.done ? 'text-decoration-line-through text-muted' : ''} fw-semibold">
+                                ${escHtml(t.title)}
+                            </span>
+                            ${getPriorityBadge(t.priority)}
+                        </div>
+                        ${t.note ? `<small class="text-muted d-block mt-1"><i class="bi bi-file-text"></i> ${escHtml(t.note.substring(0, 100))}</small>` : ''}
+                        <div class="mt-1">
+                            <small class="text-muted">
+                                ${t.due_date ? `<i class="bi bi-calendar-event"></i> Due: ${t.due_date}` : `<i class="bi bi-calendar"></i> Created: ${t.created_at}`}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary border-0" title="Edit" onclick="editTask(${t.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger border-0" title="Delete" onclick="deleteTask(${t.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </li>
+            `).join('');
+        }
+        
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // Update active button styling
+            document.getElementById('filterAll').classList.remove('btn-primary', 'filter-active');
+            document.getElementById('filterPending').classList.remove('btn-primary', 'filter-active');
+            document.getElementById('filterCompleted').classList.remove('btn-primary', 'filter-active');
+            
+            if (filter === 'all') {
+                document.getElementById('filterAll').classList.add('btn-primary', 'filter-active');
+            } else if (filter === 'pending') {
+                document.getElementById('filterPending').classList.add('btn-primary', 'filter-active');
+            } else if (filter === 'completed') {
+                document.getElementById('filterCompleted').classList.add('btn-primary', 'filter-active');
+            }
+            
+            applyFilters();
+        }
+
+        async function loadTasks() {
+            if (!activeId) return;
+            
+            try {
+                const data = await apiFetch(`/lists/${activeId}/todos`);
+                allTasks = data.data.todos;
+                applyFilters();
+                await loadSidebar(); // Update pending counts
+            } catch (error) {
+                showError('Failed to load tasks');
+            }
+        }
+
+        async function addTask() {
+            const btn = event.target;
+            setLoading(btn, true);
+
+            try {
+                const input = document.getElementById('newTask');
+                const title = input.value.trim();
+                const dueInput = document.getElementById('dueDate');
+                const due_date = dueInput.value || null;
+                const priority = document.getElementById('prioritySelect').value;
+                
+                if (!title || !activeId) {
+                    showError('Please enter a task title');
+                    return;
+                }
+
+                await apiFetch(`/lists/${activeId}/todos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, due_date, priority, note: '' })
+                });
+
+                input.value = '';
+                dueInput.value = '';
+                document.getElementById('prioritySelect').value = 'medium';
+                await loadTasks();
+
+            } catch (error) {
+                showError('Failed to add task: ' + error.message);
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        function handleEnter(e) { 
+            if (e.key === 'Enter') addTask(); 
+        }
+
+        async function toggleTask(id) {
+            try {
+                await apiFetch(`/todos/${id}/toggle`, { method: 'PATCH' });
+                await loadTasks();
+            } catch (error) {
+                showError('Failed to toggle task');
+            }
+        }
+        
+        async function editTask(id) {
+            try {
+                const data = await apiFetch(`/todos/${id}`);
+                const task = data.data;
+                
+                document.getElementById('editTaskId').value = task.id;
+                document.getElementById('editTaskTitle').value = task.title;
+                document.getElementById('editTaskNote').value = task.note || '';
+                document.getElementById('editTaskDueDate').value = task.due_date || '';
+                document.getElementById('editTaskPriority').value = task.priority;
+                
+                const modal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+                modal.show();
+            } catch (error) {
+                showError('Failed to load task details');
+            }
+        }
+        
+        async function updateTask() {
+            const btn = event.target;
+            setLoading(btn, true);
+            
+            try {
+                const id = document.getElementById('editTaskId').value;
+                const title = document.getElementById('editTaskTitle').value.trim();
+                const note = document.getElementById('editTaskNote').value;
+                const due_date = document.getElementById('editTaskDueDate').value;
+                const priority = document.getElementById('editTaskPriority').value;
+                
+                if (!title) {
+                    showError('Task title is required');
+                    return;
+                }
+                
+                await apiFetch(`/todos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, note, due_date, priority })
+                });
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editTaskModal'));
+                modal.hide();
+                await loadTasks();
+                showError('Task updated successfully!', 2000);
+            } catch (error) {
+                showError('Failed to update task');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        async function deleteTask(id) {
+            const btn = event.target.closest('button');
+            setLoading(btn, true);
+
+            try {
+                await apiFetch(`/todos/${id}`, { method: 'DELETE' });
+                await loadTasks();
+            } catch (error) {
+                showError('Failed to delete task');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        function createList() {
+            const modal = new bootstrap.Modal(document.getElementById('listModal'));
+            document.getElementById('listNameInput').value = '';
+            document.getElementById('listColorSelect').value = 'primary';
+            modal.show();
+        }
+
+        async function renameList(id, currentName) {
+            const newName = prompt('Rename list:', currentName);
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+            
+            try {
+                await apiFetch(`/lists/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+                if (activeId === id) document.getElementById('listTitle').textContent = newName.trim();
+                await loadSidebar();
+            } catch (error) {
+                showError('Failed to rename list');
+            }
+        }
+
+        async function deleteList(id, name) {
+            if (!confirm(`Delete "${name}" and all its reminders?`)) return;
+            
+            try {
+                await apiFetch(`/lists/${id}`, { method: 'DELETE' });
+                if (activeId === id) {
+                    activeId = null;
+                    document.getElementById('listTitle').textContent = 'Select a list';
+                    document.getElementById('listTitle').className = 'fw-bold mb-0 text-secondary';
+                    document.getElementById('listCount').textContent = '';
+                    document.getElementById('taskList').innerHTML = '';
+                    document.getElementById('addRow').classList.add('d-none');
+                }
+                await loadSidebar();
+            } catch (error) {
+                showError('Failed to delete list');
+            }
+        }
+
+        async function submitList() {
+            const btn = event.target;
+            setLoading(btn, true);
+
+            try {
+                const name = document.getElementById('listNameInput').value.trim();
+                const color = document.getElementById('listColorSelect').value;
+
+                if (!name) {
+                    showError("List name required");
+                    return;
+                }
+
+                await apiFetch('/lists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, color })
+                });
+
+                const modalEl = document.getElementById('listModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+
+                await loadSidebar();
+                showError('List created successfully!', 2000);
+
+            } catch (error) {
+                showError('Failed to create list');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/[&<>"']/g, m =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+        
+        function escAttr(s) {
+            return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        // Initialize
+        loadSidebar();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

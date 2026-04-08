@@ -19,10 +19,14 @@
     </div>
 
     <!-- Error alert -->
-    {% if error %}
+    {% if errors %}
       <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-3">
         <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
-        <span>{{ error }}</span>
+        <div>
+          {% for field, error in errors.items() %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
       </div>
     {% endif %}
 
@@ -36,12 +40,12 @@
           type="text"
           id="username"
           name="username"
-          value="{{ username }}"
-          class="form-control"
+          value="{{ form.username if form else '' }}"
+          class="form-control {% if errors and errors.username %}is-invalid{% endif %}"
           placeholder="e.g. Name123"
           autofocus
           autocomplete="username">
-        <div class="form-text">Min. 3 characters, no spaces.</div>
+        <div class="form-text">Min. 3 characters, only letters, numbers and underscores.</div>
       </div>
 
       <!-- Password -->
@@ -52,13 +56,16 @@
             type="password"
             id="password"
             name="password"
-            class="form-control"
+            class="form-control {% if errors and errors.password %}is-invalid{% endif %}"
             placeholder="Min. 6 characters"
             autocomplete="new-password">
           <button type="button" class="btn btn-outline-secondary" onclick="toggleVis()">
             <i class="bi bi-eye" id="eyeIcon"></i>
           </button>
         </div>
+        {% if errors and errors.password %}
+          <div class="invalid-feedback d-block">{{ errors.password }}</div>
+        {% endif %}
       </div>
 
       <!-- Submit -->
